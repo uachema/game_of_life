@@ -8,11 +8,13 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
-  // * Game Speed is defined in milliseconds
-  final gameSpeed = const Duration(milliseconds: 1000);
+// * Game Speed is defined in milliseconds
+const gameSpeed = Duration(milliseconds: 1000);
+const gameSize = 20;
 
+class _MainPageState extends State<MainPage> {
   var paused = true;
+  var gameTable = List.filled(gameSize * gameSize, false);
 
   void moveToNextGeneration() {
     if (kDebugMode) {
@@ -37,7 +39,25 @@ class _MainPageState extends State<MainPage> {
       body: Column(
         children: [
           Expanded(
-            child: Container(),
+            child: Center(
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gameSize,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 2,
+                ),
+                itemCount: gameSize * gameSize,
+                itemBuilder: (_, index) {
+                  return Box(
+                    glow: gameTable[index],
+                    onTap: () => setState(() {
+                      gameTable[index] = !gameTable[index];
+                    }),
+                  );
+                },
+              ),
+            ),
           ),
           Container(
             height: 100,
@@ -54,6 +74,27 @@ class _MainPageState extends State<MainPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class Box extends StatelessWidget {
+  const Box({
+    super.key,
+    required this.glow,
+    required this.onTap,
+  });
+
+  final bool glow;
+  final void Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: glow ? Colors.yellow : Colors.white,
       ),
     );
   }
