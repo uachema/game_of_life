@@ -1,3 +1,5 @@
+import 'dart:math' show Random;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -10,15 +12,17 @@ class MainPage extends StatefulWidget {
 
 // * Game Speed is defined in milliseconds
 const gameSpeed = Duration(milliseconds: 1000);
-const gameSize = 20;
+const gameSize = 100;
 
 class _MainPageState extends State<MainPage> {
+  late final TransformationController transformationController;
   var paused = true;
-  var gameTable = List.filled(gameSize * gameSize, false);
+  final aliveIndexes = <int>[];
 
   void moveToNextGeneration() {
     if (kDebugMode) {
       print('Moving To Next Generation!');
+      makeCellAlive(Random().nextInt(gameSize * gameSize));
     }
   }
 
@@ -27,35 +31,70 @@ class _MainPageState extends State<MainPage> {
     Future.delayed(gameSpeed, gameLoop);
   }
 
+  void makeCellAlive(int index) {
+    if (!aliveIndexes.contains(index)) {
+      setState(() => aliveIndexes.add(index));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    const zoomFactor = 6.0;
+    const xTranslate = 300.0;
+    const yTranslate = 300.0;
+
+    transformationController = TransformationController();
+
+    transformationController.value.setEntry(0, 0, zoomFactor);
+    transformationController.value.setEntry(1, 1, zoomFactor);
+    transformationController.value.setEntry(2, 2, zoomFactor);
+    transformationController.value.setEntry(0, 3, -xTranslate);
+    transformationController.value.setEntry(1, 3, -yTranslate);
     gameLoop();
   }
 
   @override
+  void dispose() {
+    transformationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+
     return Scaffold(
       body: Column(
         children: [
           Expanded(
             child: Center(
-              child: GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: gameSize,
-                  mainAxisSpacing: 2,
-                  crossAxisSpacing: 2,
+              child: Container(
+                height: width,
+                width: width,
+                color: Colors.white,
+                child: InteractiveViewer(
+                  maxScale: 6,
+                  transformationController: transformationController,
+                  child: GridView.builder(
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: gameSize,
+                      mainAxisSpacing: 0.2,
+                      crossAxisSpacing: 0.2,
+                    ),
+                    itemCount: gameSize * gameSize,
+                    itemBuilder: (_, index) {
+                      final alive = aliveIndexes.contains(index);
+                      return Box(
+                        glow: alive,
+                        onTap: () => makeCellAlive(index),
+                      );
+                    },
+                  ),
                 ),
-                itemCount: gameSize * gameSize,
-                itemBuilder: (_, index) {
-                  return Box(
-                    glow: gameTable[index],
-                    onTap: () => setState(() {
-                      gameTable[index] = !gameTable[index];
-                    }),
-                  );
-                },
               ),
             ),
           ),
@@ -94,7 +133,7 @@ class Box extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: glow ? Colors.yellow : Colors.white,
+        color: glow ? Colors.yellow : Colors.grey,
       ),
     );
   }
